@@ -11,7 +11,6 @@ import 'package:win32/win32.dart';
 class WindowsSingleInstance {
   static const MethodChannel _channel = MethodChannel('windows_single_instance');
 
-  static const _pipeName = "\\\\.\\pipe\\songbookpro_instance_checkers";
   static const ERROR_PIPE_CONNECTED = 0x80070217;
 
   static int _openPipe(String filename) {
@@ -95,16 +94,18 @@ class WindowsSingleInstance {
     }
   }
 
-  static void _startReadPipeIsolate(SendPort writer) {
-    final pipe = _createPipe(_pipeName);
+  static void _startReadPipeIsolate(Map args) {
+    final pipe = _createPipe(args["pipe"] as String);
     if (pipe == INVALID_HANDLE_VALUE) {
       print("Pipe create failed");
       return;
     }
-    _readPipe(writer, pipe);
+    _readPipe(args["port"] as SendPort, pipe);
   }
 
-  static Future ensureSingleInstance(List<String> arguments, {Function(List<String>)? onSecondWindow}) async {
+  static Future ensureSingleInstance(List<String> arguments, String pipeName,
+      {Function(List<String>)? onSecondWindow}) async {
+    final _pipeName = "\\\\.\\pipe\\$pipeName";
     final bool isSingleInstance = await _channel.invokeMethod('isSingleInstance');
     if (!isSingleInstance) {
       _writePipeData(_pipeName, arguments);
@@ -123,7 +124,7 @@ class WindowsSingleInstance {
           _bringWindowToFront();
         }
       });
-    await Isolate.spawn(_startReadPipeIsolate, reader.sendPort);
+    await Isolate.spawn(_startReadPipeIsolate, {"port": reader.sendPort, "pipe": _pipeName});
   }
 
   static void _bringWindowToFront() {

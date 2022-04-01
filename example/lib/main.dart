@@ -4,7 +4,7 @@ import 'package:windows_single_instance/windows_single_instance.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await WindowsSingleInstance.ensureSingleInstance(["Demo", "args"], onSecondWindow: (args) {
+  await WindowsSingleInstance.ensureSingleInstance(["Demo", "args"], "songbookpro_instance_checker", onSecondWindow: (args) {
     print(args);
   });
   runApp(const MyApp());

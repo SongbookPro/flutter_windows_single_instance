@@ -3,9 +3,6 @@
 // This must be included before many other Windows headers.
 #include <windows.h>
 
-// For getPlatformVersion; remove unless needed for your plugin implementation.
-#include <VersionHelpers.h>
-
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 #include <flutter/standard_method_codec.h>
@@ -65,18 +62,7 @@ WindowsSingleInstancePlugin::~WindowsSingleInstancePlugin() {
 void WindowsSingleInstancePlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
-  if (method_call.method_name().compare("getPlatformVersion") == 0) {
-    std::ostringstream version_stream;
-    version_stream << "Windows ";
-    if (IsWindows10OrGreater()) {
-      version_stream << "10+";
-    } else if (IsWindows8OrGreater()) {
-      version_stream << "8";
-    } else if (IsWindows7OrGreater()) {
-      version_stream << "7";
-    }
-    result->Success(flutter::EncodableValue(version_stream.str()));
-  } else if (method_call.method_name().compare("isSingleInstance") == 0) {
+  if (method_call.method_name().compare("isSingleInstance") == 0) {
     result->Success(flutter::EncodableValue(isSingleInstance()));
   } else {
     result->NotImplemented();
@@ -92,37 +78,6 @@ bool WindowsSingleInstancePlugin::isSingleInstance() {
   // Check for existing window
   mutex = ::CreateMutex(NULL, TRUE, L"songbookpro.win.mutex");
   if (mutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS) {
-
-  // for (HWND hwnd = GetTopWindow(NULL); hwnd != NULL; hwnd = GetNextWindow(hwnd, GW_HWNDNEXT))
-  // {   
-
-  //     if (!IsWindowVisible(hwnd))
-  //         continue;
-
-  //     // int length = GetWindowTextLength(hwnd);
-  //     // if (length == 0)
-  //     //     continue;
-
-  //     std::wstring title;
-  //     title.reserve(GetWindowTextLength(hwnd) + 1);
-  //     GetWindowText(hwnd, const_cast<WCHAR *>(title.c_str()), (int)title.capacity());
-
-  //     // char* title = new char[length+1];
-  //     // GetWindowText(hwnd, title, length+1);
-
-  //     // if (title == L"windows_single_instance_example")
-  //     // {
-  //         ::SetForegroundWindow(hwnd);
-  //         // continue;
-  //     // }
-
-  //     // std::cout << "HWND: " << hwnd << " Title: " << title << std::endl;
-
-  // }
-
-      HWND existingApp = ::FindWindow(L"FLUTTER_RUNNER_WIN32_WINDOW", L"windows_single_instance_example");
-      if (existingApp) ::SetForegroundWindow(existingApp);
-
       return false;
   }
 
