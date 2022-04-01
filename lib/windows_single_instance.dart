@@ -120,8 +120,28 @@ class WindowsSingleInstance {
       ..listen((dynamic msg) {
         if (msg is List) {
           onSecondWindow(msg.map((o) => o.toString()).toList());
+          _bringWindowToFront();
         }
       });
     await Isolate.spawn(_startReadPipeIsolate, reader.sendPort);
+  }
+
+  static void _bringWindowToFront() {
+    // https://stackoverflow.com/questions/916259/win32-bring-a-window-to-top/34414846#34414846
+
+    final lWindowName = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
+    final m_hWnd = FindWindow(lWindowName, nullptr);
+    free(lWindowName);
+
+    final hCurWnd = GetForegroundWindow();
+    final dwMyID = GetCurrentThreadId();
+    final dwCurID = GetWindowThreadProcessId(hCurWnd, nullptr);
+    AttachThreadInput(dwCurID, dwMyID, TRUE);
+    SetWindowPos(m_hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+    SetWindowPos(m_hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE);
+    SetForegroundWindow(m_hWnd);
+    SetFocus(m_hWnd);
+    SetActiveWindow(m_hWnd);
+    AttachThreadInput(dwCurID, dwMyID, FALSE);
   }
 }
