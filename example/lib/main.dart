@@ -1,11 +1,23 @@
-import 'package:flutter/material.dart';
 import 'dart:async';
 
+import 'package:bitsdojo_window/bitsdojo_window.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:windows_single_instance/windows_single_instance.dart';
 
-void main() {
+void main(List<String> args) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await WindowsSingleInstance.ensureSingleInstance(["Demo", "args"], onSecondWindow: (args) {
+    print(args);
+  });
   runApp(const MyApp());
+  doWhenWindowReady(() {
+    // final initialSize = Size(600, 450);
+    // appWindow.minSize = initialSize;
+    // appWindow.size = initialSize;
+    // appWindow.alignment = Alignment.center;
+    appWindow.show();
+  });
 }
 
 class MyApp extends StatefulWidget {
@@ -17,6 +29,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
+  bool? _isSingleInstance;
 
   @override
   void initState() {
@@ -30,8 +43,7 @@ class _MyAppState extends State<MyApp> {
     // Platform messages may fail, so we use a try/catch PlatformException.
     // We also handle the message potentially returning null.
     try {
-      platformVersion =
-          await WindowsSingleInstance.platformVersion ?? 'Unknown platform version';
+      platformVersion = await WindowsSingleInstance.platformVersion ?? 'Unknown platform version';
     } on PlatformException {
       platformVersion = 'Failed to get platform version.';
     }
@@ -48,13 +60,17 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    String value = "unkown";
+    if (_isSingleInstance != null) {
+      value = _isSingleInstance! ? "Yes" : "No";
+    }
     return MaterialApp(
       home: Scaffold(
         appBar: AppBar(
           title: const Text('Plugin example app'),
         ),
         body: Center(
-          child: Text('Running on: $_platformVersion\n'),
+          child: Text("Single instance: $value\n"),
         ),
       ),
     );
