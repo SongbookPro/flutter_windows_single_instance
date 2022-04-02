@@ -1,15 +1,24 @@
-# windows_single_instance
+# Windows Single Instance
 
-A new flutter plugin project.
+Restrict a Windows app to only be able to open one instance at a time.
 
-## Getting Started
+## Installing
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/developing-packages/),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+1. Add `WidgetsFlutterBinding.ensureInitialized();` to the start of your apps `main` function.
+1. Add the `async` modifier to your apps `main` function.
+1. Add a call to `WindowsSingleInstance.ensureSingleInstance()`, passing the apps startup args, a custom app string unique to your app (a-z, 0-9, \_ and - only), and an optional callback function.
 
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Example
 
+```
+void main(List<String> args) async {
+    WidgetsFlutterBinding.ensureInitialized();
+    await WindowsSingleInstance.ensureSingleInstance(
+        args,
+        "custom_identifier",
+        onSecondWindow: (args) {
+            print(args);
+        });
+    runApp(const MyApp());
+}
+```

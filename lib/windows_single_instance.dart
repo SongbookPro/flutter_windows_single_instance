@@ -10,8 +10,9 @@ import 'package:win32/win32.dart';
 
 class WindowsSingleInstance {
   static const MethodChannel _channel = MethodChannel('windows_single_instance');
+  static const _kErrorPipeConnected = 0x80070217;
 
-  static const ERROR_PIPE_CONNECTED = 0x80070217;
+  WindowsSingleInstance._();
 
   static int _openPipe(String filename) {
     final cPipe = filename.toNativeUtf16();
@@ -47,7 +48,7 @@ class WindowsSingleInstance {
         while (true) {
           ConnectNamedPipe(pipeHandle, overlap);
           final err = GetLastError();
-          if (err == ERROR_PIPE_CONNECTED) {
+          if (err == _kErrorPipeConnected) {
             sleep(const Duration(milliseconds: 200));
             continue;
           } else if (err == ERROR_INVALID_HANDLE) {
@@ -103,6 +104,12 @@ class WindowsSingleInstance {
     _readPipe(args["port"] as SendPort, pipe);
   }
 
+  /// Checks that the current window is unique, and exits the app not.
+  ///
+  /// __Arguments__\
+  /// `arguments`: List of strings that will be passed to the callback function of the open instance if this window is not unique\
+  /// `pipeName`: A string unique to your app\
+  /// `onSecondWindow`: Callback function that is called when a second window is attempted to be opened.
   static Future ensureSingleInstance(List<String> arguments, String pipeName,
       {Function(List<String>)? onSecondWindow}) async {
     final _pipeName = "\\\\.\\pipe\\$pipeName";
