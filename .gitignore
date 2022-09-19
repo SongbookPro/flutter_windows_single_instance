@@ -28,3 +28,4 @@
 .packages
 build/
 example/windows/flutter/ephemeral
+windows/.vs

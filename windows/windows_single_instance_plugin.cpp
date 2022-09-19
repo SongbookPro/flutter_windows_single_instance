@@ -13,6 +13,30 @@
 
 namespace {
 
+// Converts the given UTF-8 string to UTF-16.
+// https://github.com/flutter/plugins/blob/main/packages/url_launcher/url_launcher_windows/windows/url_launcher_plugin.cpp
+std::wstring Utf16FromUtf8(const std::string& utf8_string) {
+  if (utf8_string.empty()) {
+    return std::wstring();
+  }
+  int target_length =
+      ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_string.data(),
+                            static_cast<int>(utf8_string.length()), nullptr, 0);
+  if (target_length == 0) {
+    return std::wstring();
+  }
+  std::wstring utf16_string;
+  utf16_string.resize(target_length);
+  int converted_length =
+      ::MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, utf8_string.data(),
+                            static_cast<int>(utf8_string.length()),
+                            utf16_string.data(), target_length);
+  if (converted_length == 0) {
+    return std::wstring();
+  }
+  return utf16_string;
+}
+
 class WindowsSingleInstancePlugin : public flutter::Plugin {
  public:
   static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
@@ -27,7 +51,7 @@ class WindowsSingleInstancePlugin : public flutter::Plugin {
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
 
-  bool isSingleInstance();
+  bool isSingleInstance(std::wstring pipe);
 
   private:
     HANDLE mutex = NULL;
@@ -63,20 +87,33 @@ void WindowsSingleInstancePlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
   if (method_call.method_name().compare("isSingleInstance") == 0) {
-    result->Success(flutter::EncodableValue(isSingleInstance()));
-  } else {
-    result->NotImplemented();
+
+    const auto* arguments = std::get_if<flutter::EncodableMap>(method_call.arguments());
+    std::string pipe;
+
+    if (arguments) {
+        auto pipe_it = arguments->find(flutter::EncodableValue("pipe"));
+        if (pipe_it != arguments->end()) {
+            pipe = std::get<std::string>(pipe_it->second);
+
+            result->Success(flutter::EncodableValue(isSingleInstance(Utf16FromUtf8(pipe))));
+            return;
+        }
+    }
+
   }
+  result->NotImplemented();
 }
 
-bool WindowsSingleInstancePlugin::isSingleInstance() {
+bool WindowsSingleInstancePlugin::isSingleInstance(std::wstring name) {
   // Only call once
   if (mutex != NULL) {
     return true;
   }
 
   // Check for existing window
-  mutex = ::CreateMutex(NULL, TRUE, L"songbookpro.win.mutex");
+  std::wstring mutex_str = name.append(L".win.mutex");
+  mutex = ::CreateMutex(NULL, TRUE, mutex_str.c_str());
   if (mutex == NULL || GetLastError() == ERROR_ALREADY_EXISTS) {
       return false;
   }
