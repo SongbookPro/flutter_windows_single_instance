@@ -109,9 +109,11 @@ class WindowsSingleInstance {
   /// __Arguments__\
   /// `arguments`: List of strings that will be passed to the callback function of the open instance if this window is not unique\
   /// `pipeName`: A string unique to your app\
+  /// `bringWindowToFront`: Should your active window become visible\
   /// `onSecondWindow`: Callback function that is called when a second window is attempted to be opened.
   static Future ensureSingleInstance(List<String> arguments, String pipeName,
-      {Function(List<String>)? onSecondWindow}) async {
+      {Function(List<String>)? onSecondWindow,
+      bool bringWindowToFront = false}) async {
     final _pipeName = "\\\\.\\pipe\\$pipeName";
     final bool isSingleInstance =
         await _channel.invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
@@ -121,15 +123,15 @@ class WindowsSingleInstance {
     }
 
     // No callback so don't bother starting pipe
-    if (onSecondWindow == null) {
+    if (onSecondWindow == null && bringWindowToFront == false) {
       return;
     }
 
     final reader = ReceivePort()
       ..listen((dynamic msg) {
         if (msg is List) {
-          onSecondWindow(msg.map((o) => o.toString()).toList());
-          _bringWindowToFront();
+          onSecondWindow!(msg.map((o) => o.toString()).toList());
+          if (bringWindowToFront) _bringWindowToFront();
         }
       });
     await Isolate.spawn(_startReadPipeIsolate, {"port": reader.sendPort, "pipe": _pipeName});
