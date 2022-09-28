@@ -3,7 +3,7 @@ class WindowsSingleInstance {
 
   static Future ensureSingleInstance(List<String> arguments, String pipeName,
       {Function(List<String>)? onSecondWindow,
-      bool? bringWindowToFront}) async {
+      bool bringWindowToFront = true}) async {
     throw UnimplementedError(
         "windows_single_instance not supported on this platform");
   }
