@@ -113,7 +113,7 @@ class WindowsSingleInstance {
   /// `onSecondWindow`: Callback function that is called when a second window is attempted to be opened.
   static Future ensureSingleInstance(List<String> arguments, String pipeName,
       {Function(List<String>)? onSecondWindow,
-      bool bringWindowToFront = false}) async {
+      bool bringWindowToFront = true}) async {
     final _pipeName = "\\\\.\\pipe\\$pipeName";
     final bool isSingleInstance =
         await _channel.invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
@@ -130,7 +130,9 @@ class WindowsSingleInstance {
     final reader = ReceivePort()
       ..listen((dynamic msg) {
         if (msg is List) {
-          onSecondWindow!(msg.map((o) => o.toString()).toList());
+          if (onSecondWindow != null) {
+            onSecondWindow(msg.map((o) => o.toString()).toList());
+          }
           if (bringWindowToFront) _bringWindowToFront();
         }
       });
