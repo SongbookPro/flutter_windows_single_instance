@@ -4,7 +4,8 @@ import 'package:windows_single_instance/windows_single_instance.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-  await WindowsSingleInstance.ensureSingleInstance(args, "instance_checker", onSecondWindow: (args) {
+  await WindowsSingleInstance.ensureSingleInstance(args, "instance_checker",
+      onSecondWindow: (args) {
     print(args);
   });
   runApp(const MyApp());

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Adds option to disable 'bring to front' behavior
+
 ## 0.1.3
 
 - Fix issues when using with two apps simultaneously
