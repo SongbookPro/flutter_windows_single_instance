@@ -161,5 +161,6 @@ class WindowsSingleInstance {
     SetFocus(mhWnd);
     SetActiveWindow(mhWnd);
     AttachThreadInput(dwCurID, dwMyID, FALSE);
+    ShowWindow(mhWnd, SW_RESTORE);
   }
 }
