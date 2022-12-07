@@ -90,7 +90,7 @@ class WindowsSingleInstance {
     final bytes = bytesString.toNativeUtf8();
     final numWritten = malloc<Uint32>();
     try {
-      WriteFile(pipe, bytes, bytesString.length, numWritten, nullptr);
+      WriteFile(pipe, bytes, bytes.length, numWritten, nullptr);
     } finally {
       free(numWritten);
       free(bytes);
