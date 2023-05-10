@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.6
+
+- Support `win32` versions 4.x
+- Explicit support for Dart 3.0
+
 ## 0.1.5
 
 - Fix bring to front if window is minimized
