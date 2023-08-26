@@ -117,6 +117,7 @@ class WindowsSingleInstance {
   static Future ensureSingleInstance(List<String> arguments, String pipeName,
       {Function(List<String>)? onSecondWindow,
       bool bringWindowToFront = true}) async {
+    if (!Platform.isWindows) return;
     final _pipeName = "\\\\.\\pipe\\$pipeName";
     final bool isSingleInstance = await _channel
         .invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
