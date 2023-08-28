@@ -9,8 +9,7 @@ import 'package:flutter/services.dart';
 import 'package:win32/win32.dart';
 
 class WindowsSingleInstance {
-  static const MethodChannel _channel =
-      MethodChannel('windows_single_instance');
+  static const MethodChannel _channel = MethodChannel('windows_single_instance');
   static const _kErrorPipeConnected = 0x80070217;
 
   WindowsSingleInstance._();
@@ -29,9 +28,7 @@ class WindowsSingleInstance {
     try {
       return CreateNamedPipe(
         cPipe,
-        PIPE_ACCESS_INBOUND |
-            FILE_FLAG_FIRST_PIPE_INSTANCE |
-            FILE_FLAG_OVERLAPPED,
+        PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
         PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         4096,
@@ -61,7 +58,7 @@ class WindowsSingleInstance {
         }
 
         var dataSize = 16384;
-        var data = calloc<Int8>(dataSize);
+        var data = calloc<Uint8>(dataSize);
         final numRead = calloc<Uint32>();
         try {
           while (GetOverlappedResult(pipeHandle, overlap, numRead, 0) == 0) {
@@ -90,7 +87,7 @@ class WindowsSingleInstance {
     final bytes = bytesString.toNativeUtf8();
     final numWritten = malloc<Uint32>();
     try {
-      WriteFile(pipe, bytes, bytes.length, numWritten, nullptr);
+      WriteFile(pipe, bytes.cast<Uint8>(), bytes.length, numWritten, nullptr);
     } finally {
       free(numWritten);
       free(bytes);
@@ -115,14 +112,12 @@ class WindowsSingleInstance {
   /// `bringWindowToFront`: Should your active window become visible\
   /// `onSecondWindow`: Callback function that is called when a second window is attempted to be opened.
   static Future ensureSingleInstance(List<String> arguments, String pipeName,
-      {Function(List<String>)? onSecondWindow,
-      bool bringWindowToFront = true}) async {
+      {Function(List<String>)? onSecondWindow, bool bringWindowToFront = true}) async {
     if (!Platform.isWindows) return;
-    final _pipeName = "\\\\.\\pipe\\$pipeName";
-    final bool isSingleInstance = await _channel
-        .invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
+    final fullPipeName = "\\\\.\\pipe\\$pipeName";
+    final bool isSingleInstance = await _channel.invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
     if (!isSingleInstance) {
-      _writePipeData(_pipeName, arguments);
+      _writePipeData(fullPipeName, arguments);
       exit(0);
     }
 
@@ -140,8 +135,7 @@ class WindowsSingleInstance {
           if (bringWindowToFront) _bringWindowToFront();
         }
       });
-    await Isolate.spawn(
-        _startReadPipeIsolate, {"port": reader.sendPort, "pipe": _pipeName});
+    await Isolate.spawn(_startReadPipeIsolate, {"port": reader.sendPort, "pipe": fullPipeName});
   }
 
   static void _bringWindowToFront() {
@@ -156,8 +150,7 @@ class WindowsSingleInstance {
     final dwCurID = GetWindowThreadProcessId(hCurWnd, nullptr);
     AttachThreadInput(dwCurID, dwMyID, TRUE);
     SetWindowPos(mhWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-    SetWindowPos(mhWnd, HWND_NOTOPMOST, 0, 0, 0, 0,
-        SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE);
+    SetWindowPos(mhWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE);
     SetForegroundWindow(mhWnd);
     SetFocus(mhWnd);
     SetActiveWindow(mhWnd);
