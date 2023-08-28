@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.7
+
+- Support `win32` versions 5.x
+- Updated example to a newer version of Windows bootstrapping
+
 ## 0.1.6
 
 - Support `win32` versions 4.x
