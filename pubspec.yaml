@@ -1,6 +1,6 @@
 name: windows_single_instance
 description: Forces a single instance of your Windows app, bringing the existing window to the front when a new instance is opened.
-version: 0.1.7
+version: 1.0.0
 homepage: https://github.com/SongbookPro/flutter_windows_single_instance
 
 environment:

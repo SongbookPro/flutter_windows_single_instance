@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.0
+- Package is considered stable. No changes since 0.1.7
+
 ## 0.1.7
 
 - Support `win32` versions 5.x
