@@ -7,9 +7,11 @@ import 'dart:isolate';
 import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
 import 'package:win32/win32.dart';
+import 'package:window_manager/window_manager.dart';
 
 class WindowsSingleInstance {
-  static const MethodChannel _channel = MethodChannel('windows_single_instance');
+  static const MethodChannel _channel =
+      MethodChannel('windows_single_instance');
   static const _kErrorPipeConnected = 0x80070217;
 
   WindowsSingleInstance._();
@@ -28,7 +30,9 @@ class WindowsSingleInstance {
     try {
       return CreateNamedPipe(
         cPipe,
-        PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
+        PIPE_ACCESS_INBOUND |
+            FILE_FLAG_FIRST_PIPE_INSTANCE |
+            FILE_FLAG_OVERLAPPED,
         PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         4096,
@@ -112,10 +116,12 @@ class WindowsSingleInstance {
   /// `bringWindowToFront`: Should your active window become visible\
   /// `onSecondWindow`: Callback function that is called when a second window is attempted to be opened.
   static Future ensureSingleInstance(List<String> arguments, String pipeName,
-      {Function(List<String>)? onSecondWindow, bool bringWindowToFront = true}) async {
+      {Function(List<String>)? onSecondWindow,
+      bool bringWindowToFront = true}) async {
     if (!Platform.isWindows) return;
     final fullPipeName = "\\\\.\\pipe\\$pipeName";
-    final bool isSingleInstance = await _channel.invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
+    final bool isSingleInstance = await _channel
+        .invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
     if (!isSingleInstance) {
       _writePipeData(fullPipeName, arguments);
       exit(0);
@@ -135,26 +141,14 @@ class WindowsSingleInstance {
           if (bringWindowToFront) _bringWindowToFront();
         }
       });
-    await Isolate.spawn(_startReadPipeIsolate, {"port": reader.sendPort, "pipe": fullPipeName});
+    await Isolate.spawn(
+        _startReadPipeIsolate, {"port": reader.sendPort, "pipe": fullPipeName});
   }
 
   static void _bringWindowToFront() {
     // https://stackoverflow.com/questions/916259/win32-bring-a-window-to-top/34414846#34414846
 
-    final lWindowName = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
-    final mhWnd = FindWindow(lWindowName, nullptr);
-    free(lWindowName);
-
-    final hCurWnd = GetForegroundWindow();
-    final dwMyID = GetCurrentThreadId();
-    final dwCurID = GetWindowThreadProcessId(hCurWnd, nullptr);
-    AttachThreadInput(dwCurID, dwMyID, TRUE);
-    SetWindowPos(mhWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-    SetWindowPos(mhWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE);
-    SetForegroundWindow(mhWnd);
-    SetFocus(mhWnd);
-    SetActiveWindow(mhWnd);
-    AttachThreadInput(dwCurID, dwMyID, FALSE);
-    if (!identical(0, IsIconic(mhWnd))) ShowWindow(mhWnd, SW_RESTORE);
+    windowManager.restore();
+    windowManager.show();
   }
 }
