@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:windows_single_instance/windows_single_instance.dart';
+import 'package:window_manager/window_manager.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
   await WindowsSingleInstance.ensureSingleInstance(args, "instance_checker", onSecondWindow: (args) {
     print(args);
   });
