@@ -41,7 +41,7 @@ class WindowsSingleInstancePlugin : public flutter::Plugin {
  public:
   static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
 
-  WindowsSingleInstancePlugin();
+  WindowsSingleInstancePlugin(flutter::PluginRegistrarWindows *registrar);
 
   virtual ~WindowsSingleInstancePlugin();
 
@@ -55,6 +55,7 @@ class WindowsSingleInstancePlugin : public flutter::Plugin {
 
   private:
     HANDLE mutex = NULL;
+    flutter::PluginRegistrarWindows *registrar_;
 };
 
 // static
@@ -65,7 +66,7 @@ void WindowsSingleInstancePlugin::RegisterWithRegistrar(
           registrar->messenger(), "windows_single_instance",
           &flutter::StandardMethodCodec::GetInstance());
 
-  auto plugin = std::make_unique<WindowsSingleInstancePlugin>();
+  auto plugin = std::make_unique<WindowsSingleInstancePlugin>(registrar);
 
   channel->SetMethodCallHandler(
       [plugin_pointer = plugin.get()](const auto &call, auto result) {
@@ -75,7 +76,8 @@ void WindowsSingleInstancePlugin::RegisterWithRegistrar(
   registrar->AddPlugin(std::move(plugin));
 }
 
-WindowsSingleInstancePlugin::WindowsSingleInstancePlugin() {}
+WindowsSingleInstancePlugin::WindowsSingleInstancePlugin(flutter::PluginRegistrarWindows *registrar) 
+  : registrar_(registrar) {}
 
 WindowsSingleInstancePlugin::~WindowsSingleInstancePlugin() {
   if (mutex != NULL) {
@@ -100,8 +102,36 @@ void WindowsSingleInstancePlugin::HandleMethodCall(
             return;
         }
     }
-
   }
+  else if (method_call.method_name().compare("bringToFront") == 0)
+  {
+    // https://stackoverflow.com/questions/916259/win32-bring-a-window-to-top/34414846#34414846
+
+    HWND m_hWnd = registrar_->GetView()->GetNativeWindow();
+
+    // Find parent window
+    HWND parent = ::GetAncestor(m_hWnd, GA_ROOT);
+    if (parent != NULL) {
+      m_hWnd = parent;
+    }
+
+    HWND hCurWnd = ::GetForegroundWindow();
+    DWORD dwMyID = ::GetCurrentThreadId();
+    DWORD dwCurID = ::GetWindowThreadProcessId(hCurWnd, NULL);
+    ::AttachThreadInput(dwCurID, dwMyID, TRUE);
+    ::SetWindowPos(m_hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
+    ::SetWindowPos(m_hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE);
+    ::SetForegroundWindow(m_hWnd);
+    ::SetFocus(m_hWnd);
+    ::SetActiveWindow(m_hWnd);
+    ::AttachThreadInput(dwCurID, dwMyID, FALSE);
+    if (::IsIconic(m_hWnd)) {
+      ::ShowWindow(m_hWnd, SW_RESTORE);
+    }
+    result->Success();
+    return;
+  }
+
   result->NotImplemented();
 }
 

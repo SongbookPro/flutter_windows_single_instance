@@ -139,22 +139,6 @@ class WindowsSingleInstance {
   }
 
   static void _bringWindowToFront() {
-    // https://stackoverflow.com/questions/916259/win32-bring-a-window-to-top/34414846#34414846
-
-    final lWindowName = 'FLUTTER_RUNNER_WIN32_WINDOW'.toNativeUtf16();
-    final mhWnd = FindWindow(lWindowName, nullptr);
-    free(lWindowName);
-
-    final hCurWnd = GetForegroundWindow();
-    final dwMyID = GetCurrentThreadId();
-    final dwCurID = GetWindowThreadProcessId(hCurWnd, nullptr);
-    AttachThreadInput(dwCurID, dwMyID, TRUE);
-    SetWindowPos(mhWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE);
-    SetWindowPos(mhWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE);
-    SetForegroundWindow(mhWnd);
-    SetFocus(mhWnd);
-    SetActiveWindow(mhWnd);
-    AttachThreadInput(dwCurID, dwMyID, FALSE);
-    if (!identical(0, IsIconic(mhWnd))) ShowWindow(mhWnd, SW_RESTORE);
+    _channel.invokeMethod('bringToFront');
   }
 }

@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.0.1
+- Bring correct window to front when multiple flutter programs are open
+
 ## 1.0.0
 - Package is considered stable. No changes since 0.1.7
 
