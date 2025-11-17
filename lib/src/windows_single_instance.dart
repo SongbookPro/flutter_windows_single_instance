@@ -111,14 +111,23 @@ class WindowsSingleInstance {
   /// `pipeName`: A string unique to your app\
   /// `bringWindowToFront`: Should your active window become visible\
   /// `onSecondWindow`: Callback function that is called when a second window is attempted to be opened.
-  static Future ensureSingleInstance(List<String> arguments, String pipeName,
-      {Function(List<String>)? onSecondWindow, bool bringWindowToFront = true}) async {
+  /// `exitFunction`: An alternate function to exit the app, if not provided, the app will be exited using `exit(0)`.
+  static Future ensureSingleInstance(
+    List<String> arguments,
+    String pipeName, {
+    Function(List<String>)? onSecondWindow,
+    bool bringWindowToFront = true,
+    Future<void> Function()? exitFunction,
+  }) async {
     if (!Platform.isWindows) return;
     final fullPipeName = "\\\\.\\pipe\\$pipeName";
-    final bool isSingleInstance = await _channel.invokeMethod('isSingleInstance', <String, Object>{"pipe": pipeName});
+    final bool isSingleInstance = await _channel.invokeMethod('isSingleInstance', <String, Object>{
+      "pipe": pipeName,
+    });
     if (!isSingleInstance) {
       _writePipeData(fullPipeName, arguments);
-      exit(0);
+      await (exitFunction?.call() ?? Future.value(exit(0)));
+      return;
     }
 
     // No callback so don't bother starting pipe

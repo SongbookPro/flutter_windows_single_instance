@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.1.0
+- Support passing a custom exit function to `ensureSingleInstance`
+
 ## 1.0.1
 - Bring correct window to front when multiple flutter programs are open
 
