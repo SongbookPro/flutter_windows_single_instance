@@ -112,14 +112,17 @@ class WindowsSingleInstance {
   /// `bringWindowToFront`: Should your active window become visible\
   /// `onSecondWindow`: Callback function that is called when a second window is attempted to be opened.
   /// `exitFunction`: An alternate function to exit the app, if not provided, the app will be exited using `exit(0)`.
-  static Future ensureSingleInstance(
-    List<String> arguments,
-    String pipeName, {
-    Function(List<String>)? onSecondWindow,
-    bool bringWindowToFront = true,
-    Future<void> Function()? exitFunction,
-  }) async {
-    if (!Platform.isWindows) return;
+  /// __Returns__\
+  /// `true` if this is the only running instance of the app;\
+  /// `false` if another instance already exists and this invocation is terminating.
+  static Future<bool> ensureSingleInstance(
+      List<String> arguments,
+      String pipeName, {
+        Function(List<String>)? onSecondWindow,
+        bool bringWindowToFront = true,
+        Future<void> Function()? exitFunction,
+      }) async {
+    if (!Platform.isWindows) return true;
     final fullPipeName = "\\\\.\\pipe\\$pipeName";
     final bool isSingleInstance = await _channel.invokeMethod('isSingleInstance', <String, Object>{
       "pipe": pipeName,
@@ -127,12 +130,12 @@ class WindowsSingleInstance {
     if (!isSingleInstance) {
       _writePipeData(fullPipeName, arguments);
       await (exitFunction?.call() ?? Future.value(exit(0)));
-      return;
+      return false;
     }
 
     // No callback so don't bother starting pipe
     if (onSecondWindow == null && bringWindowToFront == false) {
-      return;
+      return true;
     }
 
     final reader = ReceivePort()
@@ -145,6 +148,7 @@ class WindowsSingleInstance {
         }
       });
     await Isolate.spawn(_startReadPipeIsolate, {"port": reader.sendPort, "pipe": fullPipeName});
+    return true;
   }
 
   static void _bringWindowToFront() {
