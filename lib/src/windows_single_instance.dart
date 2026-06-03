@@ -99,7 +99,7 @@ class WindowsSingleInstance {
     final pipe = _openPipe(filename);
     final bytesString = jsonEncode(arguments ?? []);
     final bytes = bytesString.toNativeUtf8();
-    final numWritten = calloc<Uint32>();
+    final numWritten = malloc<Uint32>();
     try {
       WriteFile(pipe, bytes.cast<Uint8>(), bytes.length, numWritten, null);
     } finally {
