@@ -4,8 +4,9 @@ import 'dart:ffi';
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:ffi/ffi.dart';
 import 'package:flutter/services.dart';
+
+import 'package:ffi/ffi.dart';
 import 'package:win32/win32.dart';
 
 class WindowsSingleInstance {
@@ -14,40 +15,53 @@ class WindowsSingleInstance {
 
   WindowsSingleInstance._();
 
-  static int _openPipe(String filename) {
-    final cPipe = filename.toNativeUtf16();
+  static HANDLE _openPipe(String filename) {
+    final cPipe = filename.toPcwstr();
     try {
-      return CreateFile(cPipe, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, 0);
+      final Win32Result(:value) = CreateFile(
+        cPipe,
+        GENERIC_WRITE,
+        FILE_SHARE_NONE,
+        null,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        null,
+      );
+      return value;
     } finally {
       free(cPipe);
     }
   }
 
-  static int _createPipe(String filename) {
-    final cPipe = filename.toNativeUtf16();
+  static HANDLE _createPipe(String filename) {
+    final cPipe = filename.toPcwstr();
     try {
       return CreateNamedPipe(
         cPipe,
-        PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
-        PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+        FILE_FLAGS_AND_ATTRIBUTES(
+          PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
+        ),
+        NAMED_PIPE_MODE(
+          PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
+        ),
         PIPE_UNLIMITED_INSTANCES,
         4096,
         4096,
         0,
-        nullptr,
+        null,
       );
     } finally {
-      malloc.free(cPipe);
+      free(cPipe);
     }
   }
 
-  static void _readPipe(SendPort writer, int pipeHandle) {
+  static void _readPipe(SendPort writer, HANDLE pipeHandle) {
     final overlap = calloc<OVERLAPPED>();
     try {
       while (true) {
         while (true) {
-          ConnectNamedPipe(pipeHandle, overlap);
-          final err = GetLastError();
+          final Win32Result(:error) = ConnectNamedPipe(pipeHandle, overlap);
+          final err = error;
           if (err == _kErrorPipeConnected) {
             sleep(const Duration(milliseconds: 200));
             continue;
@@ -57,11 +71,11 @@ class WindowsSingleInstance {
           break;
         }
 
-        var dataSize = 16384;
-        var data = calloc<Uint8>(dataSize);
+        const dataSize = 16384;
+        final data = calloc<Uint8>(dataSize);
         final numRead = calloc<Uint32>();
         try {
-          while (GetOverlappedResult(pipeHandle, overlap, numRead, 0) == 0) {
+          while (!GetOverlappedResult(pipeHandle, overlap, numRead, false).value) {
             sleep(const Duration(milliseconds: 200));
           }
 
@@ -85,9 +99,9 @@ class WindowsSingleInstance {
     final pipe = _openPipe(filename);
     final bytesString = jsonEncode(arguments ?? []);
     final bytes = bytesString.toNativeUtf8();
-    final numWritten = malloc<Uint32>();
+    final numWritten = calloc<Uint32>();
     try {
-      WriteFile(pipe, bytes.cast<Uint8>(), bytes.length, numWritten, nullptr);
+      WriteFile(pipe, bytes.cast<Uint8>(), bytes.length, numWritten, null);
     } finally {
       free(numWritten);
       free(bytes);
@@ -104,7 +118,7 @@ class WindowsSingleInstance {
     _readPipe(args["port"] as SendPort, pipe);
   }
 
-  /// Checks that the current window is unique, and exits the app not.
+  /// Checks that the current window is unique, and exits the app if not.
   ///
   /// __Arguments__\
   /// `arguments`: List of strings that will be passed to the callback function of the open instance if this window is not unique\
