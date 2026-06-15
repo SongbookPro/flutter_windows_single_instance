@@ -9,26 +9,33 @@ import 'package:flutter/services.dart';
 import 'package:win32/win32.dart';
 
 class WindowsSingleInstance {
-  static const MethodChannel _channel = MethodChannel('windows_single_instance');
-  static const _kErrorPipeConnected = 0x80070217;
+  static const MethodChannel _channel =
+      MethodChannel('windows_single_instance');
 
   WindowsSingleInstance._();
 
-  static int _openPipe(String filename) {
-    final cPipe = filename.toNativeUtf16();
+  static HANDLE _openPipe(String filename) {
+    final cPipe = filename.toPcwstr();
     try {
-      return CreateFile(cPipe, GENERIC_WRITE, 0, nullptr, OPEN_EXISTING, 0, 0);
+      final pipe = CreateFile(cPipe, GENERIC_WRITE, FILE_SHARE_NONE, nullptr,
+          OPEN_EXISTING, const FILE_FLAGS_AND_ATTRIBUTES(0), null);
+      if (pipe.error.isError) {
+        throw WindowsException(pipe.error.toHRESULT());
+      }
+      return pipe.value;
     } finally {
       free(cPipe);
     }
   }
 
-  static int _createPipe(String filename) {
-    final cPipe = filename.toNativeUtf16();
+  static HANDLE _createPipe(String filename) {
+    final cPipe = filename.toPcwstr();
     try {
       return CreateNamedPipe(
         cPipe,
-        PIPE_ACCESS_INBOUND | FILE_FLAG_FIRST_PIPE_INSTANCE | FILE_FLAG_OVERLAPPED,
+        PIPE_ACCESS_INBOUND |
+            FILE_FLAG_FIRST_PIPE_INSTANCE |
+            FILE_FLAG_OVERLAPPED,
         PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE | PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
         4096,
@@ -41,17 +48,16 @@ class WindowsSingleInstance {
     }
   }
 
-  static void _readPipe(SendPort writer, int pipeHandle) {
+  static void _readPipe(SendPort writer, HANDLE pipeHandle) {
     final overlap = calloc<OVERLAPPED>();
     try {
       while (true) {
         while (true) {
-          ConnectNamedPipe(pipeHandle, overlap);
-          final err = GetLastError();
-          if (err == _kErrorPipeConnected) {
+          final result = ConnectNamedPipe(pipeHandle, overlap);
+          if (result.error == ERROR_PIPE_CONNECTED) {
             sleep(const Duration(milliseconds: 200));
             continue;
-          } else if (err == ERROR_INVALID_HANDLE) {
+          } else if (result.error == ERROR_INVALID_HANDLE) {
             return;
           }
           break;
@@ -61,13 +67,18 @@ class WindowsSingleInstance {
         var data = calloc<Uint8>(dataSize);
         final numRead = calloc<Uint32>();
         try {
-          while (GetOverlappedResult(pipeHandle, overlap, numRead, 0) == 0) {
+          while (
+              !GetOverlappedResult(pipeHandle, overlap, numRead, false).value) {
             sleep(const Duration(milliseconds: 200));
           }
 
-          ReadFile(pipeHandle, data, dataSize, numRead, overlap);
-          final jsonData = data.cast<Utf8>().toDartString();
-          writer.send(jsonDecode(jsonData));
+          final result = ReadFile(pipeHandle, data, dataSize, numRead, overlap);
+          if (!result.value) {
+            stderr.writeln("[MultiInstanceHandler]: ERROR: ${result.error}");
+          } else {
+            final jsonData = data.cast<Utf8>().toDartString();
+            writer.send(jsonDecode(jsonData));
+          }
         } catch (error) {
           stderr.writeln("[MultiInstanceHandler]: ERROR: $error");
         } finally {
@@ -98,7 +109,7 @@ class WindowsSingleInstance {
   static void _startReadPipeIsolate(Map args) {
     final pipe = _createPipe(args["pipe"] as String);
     if (pipe == INVALID_HANDLE_VALUE) {
-      print("Pipe create failed");
+      stderr.writeln("[MultiInstanceHandler]: ERROR: Pipe create failed");
       return;
     }
     _readPipe(args["port"] as SendPort, pipe);
@@ -121,7 +132,8 @@ class WindowsSingleInstance {
   }) async {
     if (!Platform.isWindows) return;
     final fullPipeName = "\\\\.\\pipe\\$pipeName";
-    final bool isSingleInstance = await _channel.invokeMethod('isSingleInstance', <String, Object>{
+    final bool isSingleInstance =
+        await _channel.invokeMethod('isSingleInstance', <String, Object>{
       "pipe": pipeName,
     });
     if (!isSingleInstance) {
@@ -144,7 +156,8 @@ class WindowsSingleInstance {
           if (bringWindowToFront) _bringWindowToFront();
         }
       });
-    await Isolate.spawn(_startReadPipeIsolate, {"port": reader.sendPort, "pipe": fullPipeName});
+    await Isolate.spawn(
+        _startReadPipeIsolate, {"port": reader.sendPort, "pipe": fullPipeName});
   }
 
   static void _bringWindowToFront() {
