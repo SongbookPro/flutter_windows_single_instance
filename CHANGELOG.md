@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0
+- Update to win32 version 6
+
 ## 1.1.0
 - Support passing a custom exit function to `ensureSingleInstance`
 
