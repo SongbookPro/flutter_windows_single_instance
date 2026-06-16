@@ -11,13 +11,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  win32: ">=2.5.0 <6.0.0"
+  win32: ">=6.0.0 <7.0.0"
   ffi: ">=1.0.0 <3.0.0"
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   plugin:
