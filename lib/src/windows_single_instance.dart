@@ -17,7 +17,7 @@ class WindowsSingleInstance {
   static HANDLE _openPipe(String filename) {
     final cPipe = filename.toPcwstr();
     try {
-      final pipe = CreateFile(cPipe, GENERIC_WRITE, FILE_SHARE_NONE, nullptr,
+      final pipe = CreateFile(cPipe, GENERIC_WRITE, FILE_SHARE_NONE, null,
           OPEN_EXISTING, const FILE_FLAGS_AND_ATTRIBUTES(0), null);
       if (pipe.error.isError) {
         throw WindowsException(pipe.error.toHRESULT());
@@ -41,10 +41,10 @@ class WindowsSingleInstance {
         4096,
         4096,
         0,
-        nullptr,
+        null,
       );
     } finally {
-      malloc.free(cPipe);
+      free(cPipe);
     }
   }
 
@@ -63,8 +63,8 @@ class WindowsSingleInstance {
           break;
         }
 
-        var dataSize = 16384;
-        var data = calloc<Uint8>(dataSize);
+        const dataSize = 16384;
+        final data = calloc<Uint8>(dataSize);
         final numRead = calloc<Uint32>();
         try {
           while (
@@ -98,7 +98,7 @@ class WindowsSingleInstance {
     final bytes = bytesString.toNativeUtf8();
     final numWritten = malloc<Uint32>();
     try {
-      WriteFile(pipe, bytes.cast<Uint8>(), bytes.length, numWritten, nullptr);
+      WriteFile(pipe, bytes.cast<Uint8>(), bytes.length, numWritten, null);
     } finally {
       free(numWritten);
       free(bytes);
